@@ -8,18 +8,18 @@ the Google Maps Places API with full data extraction capabilities.
 
 import sys
 import os
-from places_api import PlacesAPIClient
-from utils import (save_results_to_json, validate_user_input, 
+from places_search.places_api import PlacesAPIClient
+from places_search.utils import (save_results_to_json, validate_user_input, 
                    create_filtered_json, export_to_csv)
 
 # Try to import from existing config.py, with fallbacks
 try:
-    from config import GOOGLE_MAPS_API_KEY
+    from places_search.config import GOOGLE_MAPS_API_KEY
 except ImportError:
     GOOGLE_MAPS_API_KEY = "YOUR_API_KEY_HERE"
 
 try:
-    from config import DEFAULT_SETTINGS
+    from places_search.config import DEFAULT_SETTINGS
 except ImportError:
     DEFAULT_SETTINGS = {
         'radius': '1000',
@@ -27,7 +27,7 @@ except ImportError:
     }
 
 try:
-    from config import EXAMPLE_LOCATIONS
+    from places_search.config import EXAMPLE_LOCATIONS
 except ImportError:
     EXAMPLE_LOCATIONS = {
         'tel_aviv': {
