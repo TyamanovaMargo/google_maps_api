@@ -1,21 +1,19 @@
+#!/usr/bin/env python3
 """
-Google Maps Places API Client
+Google Maps Places API Client - Enhanced Version
 
-This module provides a client class for interacting with the Google Maps Places API.
-It handles API requests, pagination, error handling, and data extraction.
+This module provides functionality to interact with the Google Maps Places API
+and extract comprehensive information about places.
 """
 
 import requests
-import time
+import json
 from typing import List, Dict, Optional
 
 
 class PlacesAPIClient:
     """
-    A client for interacting with Google Maps Places API.
-    
-    This class handles authentication, API requests, pagination,
-    and error handling for the Google Places Nearby Search API.
+    Client for interacting with Google Maps Places API with enhanced data extraction.
     """
     
     def __init__(self, api_key: str):
@@ -26,214 +24,271 @@ class PlacesAPIClient:
             api_key (str): Google Maps API key
         """
         self.api_key = api_key
-        self.base_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+        self.base_url = "https://maps.googleapis.com/maps/api/place"
     
-    def _make_api_request(self, location: str, keyword: str, radius: str, page_token: Optional[str] = None) -> Dict:
+    def search_nearby_places(self, location: str, keyword: str, radius: str = "1000") -> List[Dict]:
         """
-        Make a single request to the Google Maps Places API.
+        Search for places near a location with comprehensive data extraction.
         
         Args:
-            location (str): Latitude,longitude coordinates (e.g., "40.7128,-74.0060")
-            keyword (str): Search keyword (e.g., "restaurant", "hospital")
+            location (str): Latitude,longitude string
+            keyword (str): Search keyword
             radius (str): Search radius in meters
-            page_token (str, optional): Token for pagination
-        
+            
         Returns:
-            dict: API response as dictionary
-        
-        Raises:
-            requests.RequestException: If the API request fails
+            List[Dict]: List of places with comprehensive information
         """
-        # Build request parameters
-        params = {
+        # Step 1: Get basic place data from Nearby Search
+        nearby_url = f"{self.base_url}/nearbysearch/json"
+        nearby_params = {
             'location': location,
             'radius': radius,
             'keyword': keyword,
             'key': self.api_key
         }
         
-        # Add page token for pagination if provided
-        if page_token:
-            params['pagetoken'] = page_token
+        print(f"🔍 Searching for places near {location}...")
+        response = requests.get(nearby_url, params=nearby_params)
         
-        try:
-            print(f"📡 Making API request..." + (f" (page token: {page_token[:20]}...)" if page_token else ""))
-            
-            # Send GET request to Google Places API
-            response = requests.get(self.base_url, params=params, timeout=30)
-            response.raise_for_status()  # Raise exception for HTTP errors
-            
-            # Parse JSON response
-            json_response = response.json()
-            
-            # Check API-specific status
-            if json_response.get('status') not in ['OK', 'ZERO_RESULTS']:
-                error_msg = json_response.get('error_message', f"API returned status: {json_response.get('status')}")
-                raise requests.RequestException(f"Google Places API error: {error_msg}")
-            
-            return json_response
-            
-        except requests.exceptions.Timeout:
-            raise requests.RequestException("Request timed out. Please try again.")
-        except requests.exceptions.RequestException as e:
-            raise requests.RequestException(f"API request failed: {str(e)}")
-        except ValueError as e:
-            raise requests.RequestException(f"Invalid JSON response: {str(e)}")
+        if response.status_code != 200:
+            print(f"❌ API request failed with status {response.status_code}")
+            return []
+        
+        data = response.json()
+        
+        if data.get('status') != 'OK':
+            print(f"❌ API returned status: {data.get('status')}")
+            if 'error_message' in data:
+                print(f"Error message: {data['error_message']}")
+            return []
+        
+        places = data.get('results', [])
+        print(f"📍 Found {len(places)} places, getting detailed information...")
+        
+        # Step 2: Get detailed information for each place
+        detailed_places = []
+        for i, place in enumerate(places, 1):
+            print(f"📋 Processing place {i}/{len(places)}: {place.get('name', 'Unknown')}")
+            detailed_place = self._get_place_details(place)
+            if detailed_place:
+                detailed_places.append(detailed_place)
+        
+        return detailed_places
     
-    def _extract_place_data(self, api_response: Dict) -> List[Dict]:
-        """
-        Extract relevant place data from Google Places API response.
-        
-        Args:
-            api_response (dict): Raw API response
-        
-        Returns:
-            list: List of dictionaries containing extracted place data
-        """
-        places = []
-        
-        # Check if response contains results
-        if 'results' not in api_response or not api_response['results']:
-            return places
-        
-        # Extract data for each place
-        for place in api_response['results']:
-            # Get basic place information
-            place_data = {
-                'name': place.get('name', 'Unknown'),
-                'address': place.get('vicinity', 'Address not available'),
-                'latitude': None,
-                'longitude': None
-            }
-            
-            # Extract coordinates from geometry
-            geometry = place.get('geometry', {})
-            location = geometry.get('location', {})
-            
-            if location:
-                place_data['latitude'] = location.get('lat')
-                place_data['longitude'] = location.get('lng')
-            
-            # Only add places with valid coordinates
-            if place_data['latitude'] is not None and place_data['longitude'] is not None:
-                places.append(place_data)
-        
-        return places
-    
-    def search_nearby_places(self, location: str, keyword: str, radius: str) -> List[Dict]:
-        """
-        Search for nearby places using Google Places API with pagination support.
-        
-        This method handles multiple API requests to fetch all available results,
-        as Google Places API returns maximum 20 results per request with up to
-        3 pages (60 total results).
-        
-        Args:
-            location (str): Latitude,longitude coordinates
-            keyword (str): Search keyword
-            radius (str): Search radius in meters
-        
-        Returns:
-            list: Complete list of places found across all pages
-        
-        Raises:
-            requests.RequestException: If API requests fail
-        """
-        all_places = []
-        next_page_token = None
-        page_count = 0
-        max_pages = 3  # Google Places API maximum pages
-        
-        print(f"🔍 Starting search for '{keyword}' near {location} within {radius}m radius")
-        
-        while page_count < max_pages:
-            try:
-                # Make API request
-                response = self._make_api_request(location, keyword, radius, next_page_token)
-                
-                # Handle zero results
-                if response.get('status') == 'ZERO_RESULTS':
-                    if page_count == 0:
-                        print("ℹ️ No places found matching your criteria")
-                    break
-                
-                # Extract place data from current page
-                places_data = self._extract_place_data(response)
-                all_places.extend(places_data)
-                
-                page_count += 1
-                print(f"📄 Page {page_count}: Found {len(places_data)} places")
-                
-                # Check for next page
-                next_page_token = response.get('next_page_token')
-                if not next_page_token:
-                    print("ℹ️ No more pages available")
-                    break
-                
-                # Google requires a delay before using next page token
-                if page_count < max_pages:
-                    print("⏳ Waiting for next page token to become valid...")
-                    time.sleep(3)  # Wait 3 seconds for token to become valid
-                
-            except requests.RequestException as e:
-                print(f"❌ Error on page {page_count + 1}: {e}")
-                # Continue with results we have so far
-                break
-            except Exception as e:
-                print(f"❌ Unexpected error: {e}")
-                break
-        
-        print(f"✅ Search completed. Total places found: {len(all_places)}")
-        return all_places
-    
-    def get_place_details(self, place_id: str) -> Dict:
+    def _get_place_details(self, place: Dict) -> Optional[Dict]:
         """
         Get detailed information for a specific place.
         
-        Note: This method is not used in the main search functionality
-        but is provided for potential future enhancements.
-        
         Args:
-            place_id (str): Google Places place_id
-        
+            place (Dict): Basic place data from Nearby Search
+            
         Returns:
-            dict: Detailed place information
+            Optional[Dict]: Detailed place information or None if failed
         """
-        details_url = "https://maps.googleapis.com/maps/api/place/details/json"
+        place_id = place.get('place_id')
+        if not place_id:
+            return self._extract_basic_info(place)
         
-        params = {
+        # Get detailed place information
+        details_url = f"{self.base_url}/details/json"
+        details_params = {
             'place_id': place_id,
-            'key': self.api_key,
-            'fields': 'name,formatted_address,geometry,rating,reviews'
-        }
-        
-        try:
-            response = requests.get(details_url, params=params, timeout=30)
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
-            raise requests.RequestException(f"Failed to get place details: {str(e)}")
-    
-    def validate_api_key(self) -> bool:
-        """
-        Validate if the API key is working by making a simple test request.
-        
-        Returns:
-            bool: True if API key is valid, False otherwise
-        """
-        test_params = {
-            'location': '37.7749,-122.4194',  # San Francisco coordinates
-            'radius': '1000',
-            'keyword': 'test',
+            'fields': ','.join([
+                'place_id', 'name', 'formatted_address', 'vicinity',
+                'geometry', 'types', 'business_status', 'price_level',
+                'rating', 'user_ratings_total', 'reviews',
+                'formatted_phone_number', 'international_phone_number',
+                'website', 'url', 'opening_hours', 'photos',
+                'plus_code', 'permanently_closed', 'editorial_summary',
+                'delivery', 'dine_in', 'takeout', 'reservable',
+                'serves_breakfast', 'serves_lunch', 'serves_dinner',
+                'serves_beer', 'serves_wine', 'serves_brunch',
+                'wheelchair_accessible_entrance', 'curbside_pickup'
+            ]),
             'key': self.api_key
         }
         
         try:
-            response = requests.get(self.base_url, params=test_params, timeout=10)
-            json_response = response.json()
+            response = requests.get(details_url, params=details_params)
+            if response.status_code == 200:
+                details_data = response.json()
+                if details_data.get('status') == 'OK':
+                    detailed_place = details_data.get('result', {})
+                    return self._extract_comprehensive_info(place, detailed_place)
+        except Exception as e:
+            print(f"⚠️ Error getting details for {place.get('name', 'Unknown')}: {e}")
+        
+        # Fallback to basic info if details request fails
+        return self._extract_basic_info(place)
+    
+    def _extract_comprehensive_info(self, basic_place: Dict, detailed_place: Dict) -> Dict:
+        """
+        Extract comprehensive information from both basic and detailed place data.
+        
+        Args:
+            basic_place (Dict): Basic place data from Nearby Search
+            detailed_place (Dict): Detailed place data from Place Details
             
-            # Check if we get a valid response (OK or ZERO_RESULTS are both valid)
-            return json_response.get('status') in ['OK', 'ZERO_RESULTS']
+        Returns:
+            Dict: Comprehensive place information
+        """
+        # Get geometry information
+        geometry = detailed_place.get('geometry') or basic_place.get('geometry', {})
+        location = geometry.get('location', {})
+        
+        # Extract photos information
+        photos = []
+        if detailed_place.get('photos'):
+            for photo in detailed_place['photos'][:5]:  # Limit to first 5 photos
+                photo_info = {
+                    'photo_reference': photo.get('photo_reference'),
+                    'width': photo.get('width'),
+                    'height': photo.get('height'),
+                    'html_attributions': photo.get('html_attributions', []),
+                    'photo_url': f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo.get('photo_reference')}&key={self.api_key}" if photo.get('photo_reference') else None
+                }
+                photos.append(photo_info)
+        
+        # Extract reviews
+        reviews = []
+        if detailed_place.get('reviews'):
+            for review in detailed_place['reviews']:
+                review_info = {
+                    'author_name': review.get('author_name'),
+                    'author_url': review.get('author_url'),
+                    'language': review.get('language'),
+                    'profile_photo_url': review.get('profile_photo_url'),
+                    'rating': review.get('rating'),
+                    'relative_time_description': review.get('relative_time_description'),
+                    'text': review.get('text'),
+                    'time': review.get('time')
+                }
+                reviews.append(review_info)
+        
+        # Extract opening hours
+        opening_hours = {}
+        if detailed_place.get('opening_hours'):
+            oh = detailed_place['opening_hours']
+            opening_hours = {
+                'open_now': oh.get('open_now'),
+                'weekday_text': oh.get('weekday_text', []),
+                'periods': oh.get('periods', [])
+            }
+        
+        # Build comprehensive place data
+        place_data = {
+            # Basic identification
+            'place_id': detailed_place.get('place_id') or basic_place.get('place_id'),
+            'name': detailed_place.get('name') or basic_place.get('name'),
+            'types': detailed_place.get('types') or basic_place.get('types', []),
             
-        except Exception:
-            return False
+            # Location information
+            'latitude': location.get('lat'),
+            'longitude': location.get('lng'),
+            'formatted_address': detailed_place.get('formatted_address') or basic_place.get('vicinity'),
+            'vicinity': detailed_place.get('vicinity') or basic_place.get('vicinity'),
+            'plus_code': detailed_place.get('plus_code', {}),
+            
+            # Business information
+            'business_status': detailed_place.get('business_status') or basic_place.get('business_status'),
+            'permanently_closed': detailed_place.get('permanently_closed', False),
+            'price_level': detailed_place.get('price_level') or basic_place.get('price_level'),
+            
+            # Ratings and reviews
+            'rating': detailed_place.get('rating') or basic_place.get('rating'),
+            'user_ratings_total': detailed_place.get('user_ratings_total') or basic_place.get('user_ratings_total'),
+            'reviews': reviews,
+            
+            # Contact information
+            'formatted_phone_number': detailed_place.get('formatted_phone_number'),
+            'international_phone_number': detailed_place.get('international_phone_number'),
+            'website': detailed_place.get('website'),
+            'url': detailed_place.get('url'),
+            
+            # Operating hours
+            'opening_hours': opening_hours,
+            
+            # Photos
+            'photos': photos,
+            
+            # Services and amenities
+            'delivery': detailed_place.get('delivery'),
+            'dine_in': detailed_place.get('dine_in'),
+            'takeout': detailed_place.get('takeout'),
+            'reservable': detailed_place.get('reservable'),
+            'serves_breakfast': detailed_place.get('serves_breakfast'),
+            'serves_lunch': detailed_place.get('serves_lunch'),
+            'serves_dinner': detailed_place.get('serves_dinner'),
+            'serves_beer': detailed_place.get('serves_beer'),
+            'serves_wine': detailed_place.get('serves_wine'),
+            'serves_brunch': detailed_place.get('serves_brunch'),
+            'wheelchair_accessible_entrance': detailed_place.get('wheelchair_accessible_entrance'),
+            'curbside_pickup': detailed_place.get('curbside_pickup'),
+            
+            # Additional information
+            'editorial_summary': detailed_place.get('editorial_summary', {}),
+            'geometry': geometry,
+            
+            # Raw data (for debugging or future use)
+            'raw_basic_data': basic_place,
+            'raw_detailed_data': detailed_place
+        }
+        
+        return place_data
+    
+    def _extract_basic_info(self, place: Dict) -> Dict:
+        """
+        Extract basic information when detailed data is not available.
+        
+        Args:
+            place (Dict): Basic place data
+            
+        Returns:
+            Dict: Basic place information
+        """
+        geometry = place.get('geometry', {})
+        location = geometry.get('location', {})
+        
+        # Extract basic photos
+        photos = []
+        if place.get('photos'):
+            for photo in place['photos'][:3]:  # Limit to first 3 photos for basic
+                photo_info = {
+                    'photo_reference': photo.get('photo_reference'),
+                    'width': photo.get('width'),
+                    'height': photo.get('height'),
+                    'photo_url': f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo.get('photo_reference')}&key={self.api_key}" if photo.get('photo_reference') else None
+                }
+                photos.append(photo_info)
+        
+        return {
+            # Basic identification
+            'place_id': place.get('place_id'),
+            'name': place.get('name'),
+            'types': place.get('types', []),
+            
+            # Location information
+            'latitude': location.get('lat'),
+            'longitude': location.get('lng'),
+            'formatted_address': place.get('vicinity'),
+            'vicinity': place.get('vicinity'),
+            
+            # Business information
+            'business_status': place.get('business_status'),
+            'permanently_closed': place.get('permanently_closed', False),
+            'price_level': place.get('price_level'),
+            
+            # Ratings
+            'rating': place.get('rating'),
+            'user_ratings_total': place.get('user_ratings_total'),
+            
+            # Basic photos
+            'photos': photos,
+            
+            # Geometry
+            'geometry': geometry,
+            
+            # Raw data
+            'raw_basic_data': place,
+            'raw_detailed_data': None
+        }

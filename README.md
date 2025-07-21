@@ -6,6 +6,15 @@ A Python project for searching places and businesses around a given location usi
 
 This project provides a command-line interface to search for places using Google's Places API. It can find restaurants, hospitals, shops, and any other businesses within a specified radius of given coordinates. The results are saved as JSON files for further processing or analysis.
 
+The script will now collect ALL available information about places including:
+
+📝 Full reviews with author details
+📸 Photo URLs for download
+⏰ Operating hours and schedules
+📞 Contact information
+🏷️ Services and amenities
+💰 Price levels
+⭐ Ratings and review count
 ### Features
 
 - ✅ Search places by keyword around any location

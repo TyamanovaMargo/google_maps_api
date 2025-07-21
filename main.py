@@ -1,27 +1,61 @@
 #!/usr/bin/env python3
 """
-Google Maps Places API Search - Main CLI Script
+Google Maps Places API Search - Enhanced Main CLI Script
 
-This script provides a command-line interface for searching places using
-the Google Maps Places API. It collects user input and orchestrates the
-search process using functions from other modules.
+This script provides a comprehensive command-line interface for searching places using
+the Google Maps Places API with full data extraction capabilities.
 """
 
 import sys
+import os
 from places_api import PlacesAPIClient
-from utils import save_results_to_json, validate_user_input
-from config import GOOGLE_MAPS_API_KEY, DEFAULT_SETTINGS, EXAMPLE_LOCATIONS
+from utils import (save_results_to_json, validate_user_input, 
+                   create_filtered_json, export_to_csv)
+
+# Try to import from existing config.py, with fallbacks
+try:
+    from config import GOOGLE_MAPS_API_KEY
+except ImportError:
+    GOOGLE_MAPS_API_KEY = "YOUR_API_KEY_HERE"
+
+try:
+    from config import DEFAULT_SETTINGS
+except ImportError:
+    DEFAULT_SETTINGS = {
+        'radius': '1000',
+        'output_file': 'places_results.json'
+    }
+
+try:
+    from config import EXAMPLE_LOCATIONS
+except ImportError:
+    EXAMPLE_LOCATIONS = {
+        'tel_aviv': {
+            'description': 'Тель-Авив центр',
+            'latitude': '32.0853',
+            'longitude': '34.7818'
+        },
+        'jerusalem': {
+            'description': 'Иерусалим центр', 
+            'latitude': '31.7683',
+            'longitude': '35.2137'
+        },
+        'petah_tikva': {
+            'description': 'Петах-Тиква центр',
+            'latitude': '32.0873',
+            'longitude': '34.8876'
+        }
+    }
 
 
 def show_example_locations():
-    """
-    Display available example locations for quick testing.
-    """
+    """Display available example locations for quick testing."""
     print("\n📍 Example locations for quick testing:")
-    print("-" * 40)
+    print("-" * 50)
     for key, location in EXAMPLE_LOCATIONS.items():
-        print(f"{key}: {location['description']} ({location['latitude']}, {location['longitude']})")
-    print("-" * 40)
+        print(f"  {key}: {location['description']}")
+        print(f"     📍 {location['latitude']}, {location['longitude']}")
+    print("-" * 50)
 
 
 def get_user_input():
@@ -31,12 +65,12 @@ def get_user_input():
     Returns:
         dict: Dictionary containing user input parameters
     """
-    print("=" * 50)
-    print("Google Maps Places API Search Tool")
-    print("=" * 50)
+    print("=" * 60)
+    print("🗺️  Google Maps Places API Search Tool - Enhanced Edition")
+    print("=" * 60)
     print()
     
-    # Check if API key is configured
+    # API Key configuration
     if GOOGLE_MAPS_API_KEY == "YOUR_API_KEY_HERE":
         print("⚠️  API key not configured!")
         print("Please edit config.py and add your Google Maps API key.")
@@ -50,8 +84,8 @@ def get_user_input():
         else:
             api_key = input("Enter your Google Maps API Key: ").strip()
     
-    # Show example locations
-    show_locations = input("\nShow example locations? (y/n, default: n): ").strip().lower()
+    # Location selection
+    show_locations = input("\n🌍 Show example locations? (y/n, default: n): ").strip().lower()
     if show_locations in ['y', 'yes']:
         show_example_locations()
         
@@ -60,31 +94,35 @@ def get_user_input():
             location = EXAMPLE_LOCATIONS[use_example]
             latitude = location['latitude']
             longitude = location['longitude']
-            print(f"Using {location['description']}: {latitude}, {longitude}")
+            print(f"📍 Using {location['description']}: {latitude}, {longitude}")
         else:
-            print("Enter custom coordinates:")
+            print("📍 Enter custom coordinates:")
             latitude = input("Latitude: ").strip()
             longitude = input("Longitude: ").strip()
     else:
-        # Collect location coordinates
-        print("\nEnter location coordinates:")
+        print("\n📍 Enter location coordinates:")
         latitude = input("Latitude: ").strip()
         longitude = input("Longitude: ").strip()
     
-    # Collect search parameters
-    keyword = input("\nEnter search keyword (e.g., 'restaurant', 'hospital', 'cafe'): ").strip()
+    # Search parameters
+    keyword = input("\n🔍 Enter search keyword (e.g., 'restaurant', 'hospital', 'cafe'): ").strip()
     
     # Radius with default value
     default_radius = DEFAULT_SETTINGS.get('radius', '1000')
-    radius = input(f"Enter search radius in meters (1-50000, default: {default_radius}): ").strip()
+    radius = input(f"📏 Enter search radius in meters (1-50000, default: {default_radius}): ").strip()
     if not radius:
         radius = default_radius
     
-    # Optional: output filename with default
+    # Output options
+    print("\n💾 Output Options:")
     default_filename = DEFAULT_SETTINGS.get('output_file', 'places_results.json')
-    output_file = input(f"Enter output filename (default: {default_filename}): ").strip()
+    output_file = input(f"JSON filename (default: {default_filename}): ").strip()
     if not output_file:
         output_file = default_filename
+    
+    # Additional export options
+    export_csv = input("Also export to CSV? (y/n, default: n): ").strip().lower() in ['y', 'yes']
+    create_minimal = input("Create minimal JSON with basic info only? (y/n, default: n): ").strip().lower() in ['y', 'yes']
     
     return {
         'api_key': api_key,
@@ -92,63 +130,158 @@ def get_user_input():
         'longitude': longitude,
         'keyword': keyword,
         'radius': radius,
-        'output_file': output_file
+        'output_file': output_file,
+        'export_csv': export_csv,
+        'create_minimal': create_minimal
     }
 
 
 def display_search_summary(user_input):
-    """
-    Display a summary of the search parameters before starting.
-    
-    Args:
-        user_input (dict): Dictionary containing user input parameters
-    """
-    print("\n" + "-" * 40)
-    print("SEARCH SUMMARY")
-    print("-" * 40)
-    print(f"Location: {user_input['latitude']}, {user_input['longitude']}")
-    print(f"Keyword: {user_input['keyword']}")
-    print(f"Radius: {user_input['radius']} meters")
-    print(f"Output file: {user_input['output_file']}")
-    print("-" * 40)
+    """Display a summary of the search parameters before starting."""
+    print("\n" + "="*50)
+    print("🔍 SEARCH CONFIGURATION")
+    print("="*50)
+    print(f"📍 Location: {user_input['latitude']}, {user_input['longitude']}")
+    print(f"🏷️  Keyword: {user_input['keyword']}")
+    print(f"📏 Radius: {user_input['radius']} meters")
+    print(f"💾 Main output: {user_input['output_file']}")
+    if user_input['export_csv']:
+        csv_name = user_input['output_file'].replace('.json', '.csv')
+        print(f"📊 CSV export: {csv_name}")
+    if user_input['create_minimal']:
+        minimal_name = user_input['output_file'].replace('.json', '_minimal.json')
+        print(f"📋 Minimal JSON: {minimal_name}")
+    print("="*50)
     print()
 
 
 def display_results_summary(places_data):
-    """
-    Display a summary of the search results.
-    
-    Args:
-        places_data (list): List of place dictionaries
-    """
+    """Display a comprehensive summary of the search results."""
     if not places_data:
-        print("No places found matching your criteria.")
+        print("❌ No places found matching your criteria.")
         return
     
-    print(f"\n✅ Found {len(places_data)} places!")
-    print("\nFirst 5 results:")
-    print("-" * 40)
+    print(f"\n✅ Successfully found {len(places_data)} places!")
+    print("\n📊 Quick Statistics:")
     
-    # Display first 5 results as preview
+    # Count places with different data types
+    with_ratings = sum(1 for p in places_data if p.get('rating'))
+    with_phone = sum(1 for p in places_data if p.get('formatted_phone_number'))
+    with_website = sum(1 for p in places_data if p.get('website'))
+    with_reviews = sum(1 for p in places_data if p.get('reviews'))
+    
+    print(f"   ⭐ Places with ratings: {with_ratings}")
+    print(f"   📞 Places with phone numbers: {with_phone}")
+    print(f"   🌐 Places with websites: {with_website}")
+    print(f"   📝 Places with reviews: {with_reviews}")
+    
+    # Show preview of top results
+    print(f"\n🏆 Top {min(5, len(places_data))} Results:")
+    print("-" * 60)
+    
     for i, place in enumerate(places_data[:5], 1):
-        print(f"{i}. {place['name']}")
-        print(f"   📍 {place['address']}")
-        print(f"   🌐 {place['latitude']}, {place['longitude']}")
+        print(f"{i}. 🏢 {place.get('name', 'Unknown')}")
+        print(f"   📍 {place.get('formatted_address', 'No address')}")
+        print(f"   🌐 {place.get('latitude', 'N/A')}, {place.get('longitude', 'N/A')}")
+        
+def display_results_summary(places_data):
+    """Display a comprehensive summary of the search results."""
+    if not places_data:
+        print("❌ No places found matching your criteria.")
+        return
+    
+    print(f"\n✅ Successfully found {len(places_data)} places!")
+    print("\n📊 Quick Statistics:")
+    
+    # Count places with different data types
+    with_ratings = sum(1 for p in places_data if p.get('rating'))
+    with_phone = sum(1 for p in places_data if p.get('formatted_phone_number'))
+    with_website = sum(1 for p in places_data if p.get('website'))
+    with_reviews = sum(1 for p in places_data if p.get('reviews'))
+    
+    print(f"   ⭐ Places with ratings: {with_ratings}")
+    print(f"   📞 Places with phone numbers: {with_phone}")
+    print(f"   🌐 Places with websites: {with_website}")
+    print(f"   📝 Places with reviews: {with_reviews}")
+    
+    # Show preview of top results
+    print(f"\n🏆 Top {min(5, len(places_data))} Results:")
+    print("-" * 60)
+    
+    for i, place in enumerate(places_data[:5], 1):
+        print(f"{i}. 🏢 {place.get('name', 'Unknown')}")
+        print(f"   📍 {place.get('formatted_address', 'No address')}")
+        print(f"   🌐 {place.get('latitude', 'N/A')}, {place.get('longitude', 'N/A')}")
+        
+        rating = place.get('rating')
+        if rating:
+            stars = "⭐" * int(rating)
+            print(f"   {stars} {rating}/5 ({place.get('user_ratings_total', 0)} reviews)")
+        
+        if place.get('website'):
+            print(f"   🌐 {place['website']}")
+        if place.get('formatted_phone_number'):
+            print(f"   📞 {place['formatted_phone_number']}")
+        
         print()
     
     if len(places_data) > 5:
-        print(f"... and {len(places_data) - 5} more places")
+        print(f"   ... and {len(places_data) - 5} more places")
+
+
+def save_all_formats(places_data, user_input):
+    """Save results in all requested formats."""
+    saved_files = []
+    
+    # Main JSON file with full data
+    print(f"💾 Saving main data to {user_input['output_file']}...")
+    if save_results_to_json(places_data, user_input['output_file']):
+        saved_files.append(user_input['output_file'])
+    else:
+        print("❌ Error saving main JSON file")
+        return False
+    
+    # CSV export if requested
+    if user_input['export_csv']:
+        csv_filename = user_input['output_file'].replace('.json', '.csv')
+        print(f"📊 Exporting to CSV: {csv_filename}...")
+        if export_to_csv(places_data, csv_filename):
+            saved_files.append(csv_filename)
+    
+    # Minimal JSON if requested
+    if user_input['create_minimal']:
+        minimal_filename = user_input['output_file'].replace('.json', '_minimal.json')
+        minimal_fields = ['name', 'formatted_address', 'latitude', 'longitude', 
+                         'rating', 'formatted_phone_number', 'website', 'types']
+        print(f"📋 Creating minimal JSON: {minimal_filename}...")
+        if create_filtered_json(places_data, minimal_filename, minimal_fields):
+            saved_files.append(minimal_filename)
+    
+    # Display saved files
+    if saved_files:
+        print(f"\n✅ Files saved: {len(saved_files)}")
+        for filename in saved_files:
+            file_size = os.path.getsize(filename)
+            if file_size > 1024 * 1024:
+                size_str = f"{file_size / (1024 * 1024):.2f} MB"
+            else:
+                size_str = f"{file_size / 1024:.2f} KB"
+            print(f"   📁 {filename} ({size_str})")
+        return True
+    
+    return False
 
 
 def main():
-    """
-    Main function that orchestrates the entire search process.
-    """
+    """Main function that orchestrates the entire search process."""
     try:
+        print("🚀 Starting enhanced places search...")
+        
         # Step 1: Get user input
         user_input = get_user_input()
         
         # Step 2: Validate input
+        print("\n🔍 Validating input parameters...")
         if not validate_user_input(user_input):
             print("❌ Invalid input. Please check your parameters and try again.")
             sys.exit(1)
@@ -156,14 +289,23 @@ def main():
         # Step 3: Display search summary
         display_search_summary(user_input)
         
+        # Confirmation
+        proceed = input("Continue with search? (y/n, default: y): ").strip().lower()
+        if proceed in ['n', 'no']:
+            print("🛑 Search cancelled by user")
+            sys.exit(0)
+        
         # Step 4: Initialize API client
+        print("🔧 Initializing API client...")
         client = PlacesAPIClient(user_input['api_key'])
         
         # Step 5: Format location string
         location = f"{user_input['latitude']},{user_input['longitude']}"
         
         # Step 6: Search for places
-        print("🔍 Searching for places...")
+        print(f"🔍 Searching for places with keyword '{user_input['keyword']}'...")
+        print("⏳ This may take a while as we're collecting comprehensive information...")
+        
         places_data = client.search_nearby_places(
             location=location,
             keyword=user_input['keyword'],
@@ -173,24 +315,31 @@ def main():
         # Step 7: Display results summary
         display_results_summary(places_data)
         
-        # Step 8: Save results to JSON file
+        # Step 8: Save results in all requested formats
         if places_data:
-            success = save_results_to_json(places_data, user_input['output_file'])
-            if success:
-                print(f"💾 Results saved to {user_input['output_file']}")
+            if save_all_formats(places_data, user_input):
+                print("\n🎉 Search completed successfully!")
+                
+                # Display data richness info
+                total_reviews = sum(len(p.get('reviews', [])) for p in places_data)
+                total_photos = sum(len(p.get('photos', [])) for p in places_data)
+                print(f"📊 Additional data collected:")
+                print(f"   📝 {total_reviews} reviews")
+                print(f"   📸 {total_photos} photo references")
+                
             else:
-                print("❌ Error saving results to file")
+                print("❌ Error saving results")
                 sys.exit(1)
         else:
-            print("No results to save.")
-        
-        print("\n✨ Search completed successfully!")
+            print("ℹ️  No results to save.")
         
     except KeyboardInterrupt:
         print("\n\n⚠️ Search interrupted by user")
         sys.exit(0)
     except Exception as e:
         print(f"\n❌ An unexpected error occurred: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
 
