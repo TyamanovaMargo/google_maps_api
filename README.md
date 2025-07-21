@@ -36,11 +36,21 @@ This project provides a command-line interface to search for places using Google
    pip install -r requirements.txt
    ```
 
-3. **Get Google Maps API Key**
+3. **Configure API Key**
+   ```bash
+   # Copy the example config file
+   cp config.example.py config.py
+   
+   # Edit config.py and add your API key
+   # Replace "YOUR_API_KEY_HERE" with your actual Google Maps API key
+   ```
+
+4. **Get Google Maps API Key**
    - Go to [Google Cloud Console](https://console.cloud.google.com/)
    - Create a new project or select existing one
    - Enable the "Places API"
    - Create credentials (API Key)
+   - Copy the API key to `config.py`
    - (Optional) Restrict the API key to Places API for security
 
 ### Project Structure
@@ -50,7 +60,10 @@ google-maps-places-search/
 ├── main.py              # Main CLI script
 ├── places_api.py        # Google Places API client
 ├── utils.py             # Utility functions
+├── config.py            # Your API configuration (create from example)
+├── config.example.py    # Configuration template
 ├── requirements.txt     # Python dependencies
+├── .gitignore          # Git ignore file (excludes config.py)
 └── README.md           # This file
 ```
 
@@ -58,19 +71,22 @@ google-maps-places-search/
 
 ### Basic Usage
 
-Run the main script and follow the interactive prompts:
+1. **First setup your API key:**
+   ```bash
+   cp config.example.py config.py
+   # Edit config.py and replace YOUR_API_KEY_HERE with your actual API key
+   ```
 
-```bash
-python main.py
-```
+2. **Run the main script:**
+   ```bash
+   python main.py
+   ```
 
-The script will ask for:
-- **API Key**: Your Google Maps API key
-- **Latitude**: Location latitude (e.g., `40.7128` for NYC)
-- **Longitude**: Location longitude (e.g., `-74.0060` for NYC)
-- **Keyword**: Search term (e.g., `restaurant`, `hospital`, `coffee`)
-- **Radius**: Search radius in meters (1-50000)
-- **Output File**: JSON filename (optional, defaults to `places_results.json`)
+The script will:
+- Use the API key from `config.py` (or ask for it if not configured)
+- Offer example locations for quick testing
+- Ask for search parameters
+- Save results to JSON file
 
 ### Example Session
 
@@ -79,14 +95,26 @@ The script will ask for:
 Google Maps Places API Search Tool
 ==================================================
 
-Enter your Google Maps API Key: AIzaSyC...
-Enter location coordinates:
-Latitude: 40.7128
-Longitude: -74.0060
+✅ Using API key from config.py
+Use configured API key? (y/n, default: y): y
+
+Show example locations? (y/n, default: n): y
+
+📍 Example locations for quick testing:
+----------------------------------------
+new_york: New York City, USA (40.7128, -74.0060)
+london: London, UK (51.5074, -0.1278)
+tokyo: Tokyo, Japan (35.6762, 139.6503)
+paris: Paris, France (48.8566, 2.3522)
+----------------------------------------
+
+Use example location? Enter key (or 'n' for custom): new_york
+Using New York City, USA: 40.7128, -74.0060
 
 Enter search keyword (e.g., 'restaurant', 'hospital', 'cafe'): pizza
-Enter search radius in meters (1-50000): 2000
-Enter output filename (press Enter for 'places_results.json'): nyc_pizza.json
+Enter search radius in meters (1-50000, default: 1000): 2000
+Enter output filename (default: places_results.json): nyc_pizza.json
+```
 
 ----------------------------------------
 SEARCH SUMMARY
@@ -161,11 +189,6 @@ The results are saved as JSON with the following structure:
 
 ## 🔧 Module Documentation
 
-### `main.py`
-- Main CLI script that orchestrates the search process
-- Handles user input collection and validation
-- Displays search progress and results summary
-
 ### `places_api.py`
 - `PlacesAPIClient`: Main API client class
 - `search_nearby_places()`: Search with pagination support
@@ -178,7 +201,59 @@ The results are saved as JSON with the following structure:
 - `load_results_from_json()`: Load previously saved results
 - Various helper functions for formatting and calculations
 
-## 📝 API Limits & Notes
+### `utils.py`
+- `validate_user_input()`: Validate all user inputs
+- `save_results_to_json()`: Save results with metadata
+- `load_results_from_json()`: Load previously saved results
+- Various helper functions for formatting and calculations
+
+## 🛠️ Configuration
+
+### API Key Setup
+
+1. **Create config.py from template:**
+   ```bash
+   cp config.example.py config.py
+   ```
+
+2. **Edit config.py:**
+   ```python
+   # Replace this line:
+   GOOGLE_MAPS_API_KEY = "YOUR_API_KEY_HERE"
+   
+   # With your actual API key:
+   GOOGLE_MAPS_API_KEY = "AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   ```
+
+3. **Security Note:**
+   - `config.py` is included in `.gitignore` to prevent accidental commits
+   - Never share your API key publicly
+   - Consider using environment variables for production deployments
+
+### Default Settings
+
+You can customize default values in `config.py`:
+
+```python
+DEFAULT_SETTINGS = {
+    "radius": "2000",  # Default search radius
+    "output_file": "my_results.json",  # Default output filename
+}
+```
+
+### Example Locations
+
+Pre-configured locations for quick testing are available in `config.py`. You can add your own:
+
+```python
+EXAMPLE_LOCATIONS = {
+    "my_city": {
+        "latitude": "12.3456",
+        "longitude": "78.9012",
+        "description": "My City Name"
+    }
+}
+```
 
 - **Results per page**: 20 (Google limit)
 - **Maximum pages**: 3 (60 total results maximum)
@@ -202,7 +277,12 @@ The project handles various error scenarios:
 
 ### Common Issues
 
-1. **"API key invalid"**
+1. **"API key not configured"**
+   - Copy `config.example.py` to `config.py`
+   - Edit `config.py` and add your real API key
+   - Or enter API key when prompted
+
+2. **"API key invalid"**
    - Verify your API key is correct
    - Ensure Places API is enabled in Google Cloud Console
    - Check API key restrictions
