@@ -1,0 +1,7 @@
+Top categories:
+restaurant           20
+point_of_interest    20
+food                 20
+establishment        20
+meal_takeaway         2
+Name: count, dtype: int64
