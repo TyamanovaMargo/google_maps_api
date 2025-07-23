@@ -1,11 +1,8 @@
 # src/analyzer.py
 import os
 from typing import List, Dict, Any
-from langchain.llms import OpenAI
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
-from langchain.schema import BaseOutputParser
 from groq import Groq
+from dotenv import load_dotenv
 import json
 
 from .models import BusinessData, BusinessAnalysis, QueryResponse
@@ -13,7 +10,7 @@ from .utils import split_reviews, parse_business_types, format_price_level, setu
 
 logger = setup_logging()
 
-class BusinessAnalysisParser(BaseOutputParser):
+class BusinessAnalysisParser:
     """Custom parser for business analysis output"""
     
     def parse(self, text: str) -> Dict[str, Any]:
@@ -66,13 +63,29 @@ class BusinessAnalysisParser(BaseOutputParser):
                 'weaknesses': []
             }
 
+class PromptTemplate:
+    """Simple prompt template class"""
+    
+    def __init__(self, input_variables: List[str], template: str):
+        self.input_variables = input_variables
+        self.template = template
+    
+    def format(self, **kwargs) -> str:
+        """Format template with provided variables"""
+        return self.template.format(**kwargs)
+
 class BusinessAnalyzer:
-    """Main analyzer class using LangChain and Groq"""
+    """Main analyzer class using Groq API directly"""
     
     def __init__(self, groq_api_key: str = None):
+        # Load environment variables first
+        load_dotenv()
         self.groq_api_key = groq_api_key or os.getenv('GROQ_API_KEY')
         if not self.groq_api_key:
-            raise ValueError("GROQ_API_KEY not provided")
+            raise ValueError(
+                "GROQ_API_KEY not found. Please set it in your .env file or environment variables.\n"
+                "Create a .env file with: GROQ_API_KEY=your_actual_api_key"
+            )
         
         self.client = Groq(api_key=self.groq_api_key)
         self.parser = BusinessAnalysisParser()

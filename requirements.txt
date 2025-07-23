@@ -13,9 +13,9 @@ cycler==0.12.1
 dataclasses-json==0.6.7
 distro==1.9.0
 exceptiongroup==1.3.0
-faiss-cpu==1.8.0
 fonttools==4.59.0
 frozenlist==1.7.0
+groq==0.4.1
 h11==0.16.0
 httpcore==1.0.9
 httpx==0.28.1
@@ -26,12 +26,6 @@ jq==1.10.0
 jsonpatch==1.33
 jsonpointer==3.0.0
 kiwisolver==1.4.8
-langchain==0.1.20
-langchain-community==0.0.38
-langchain-core==0.1.53
-langchain-openai==0.1.6
-langchain-text-splitters==0.0.2
-langsmith==0.1.147
 marshmallow==3.26.1
 matplotlib==3.8.4
 multidict==6.6.3
@@ -48,6 +42,7 @@ pydantic==2.11.7
 pydantic_core==2.33.2
 pyparsing==3.2.3
 python-dateutil==2.9.0.post0
+python-dotenv==1.1.1
 pytz==2025.2
 PyYAML==6.0.2
 regex==2024.11.6

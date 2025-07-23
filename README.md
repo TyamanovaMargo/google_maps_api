@@ -517,13 +517,8 @@ Each place is sent to the LLM with:
 
 MIT — free to use and modify.
 
----
 
-```
-
-Would you like me to save it directly into your project as `README.md`?
-```
- Project Structure
+# Project Structure
 business_analyzer/
 ├── main.py
 ├── src/
@@ -536,16 +531,11 @@ business_analyzer/
 │   └── analysis_output.json
 ├── data/
 │   └── business_data.json
+├── .env.example
 ├── requirements.txt
 └── README.md
 
-# requirements.txt
-langchain==0.1.0
-langchain-groq==0.0.1
-groq==0.4.1
-pydantic==2.5.0
-python-dotenv==1.0.0
-typing-extensions==4.8.0
+
 
 # README.md
 # Business Places Analyzer
@@ -555,7 +545,7 @@ A comprehensive Python project that analyzes business places using metadata and 
 ## Features
 
 - **Data Loading**: Parse JSON files containing business metadata and reviews
-- **Semantic Analysis**: Analyze strengths, weaknesses, service quality, staff behavior, pricing, and user satisfaction
+- **Semantic Analysis**: Analyze strengths, weaknesses, service quality, staff behavior, pricing, and user satisfaction using Groq API
 - **Query System**: Ask general questions about businesses and get insights
 - **Structured Output**: Generate structured reports with summaries and recommendations
 
@@ -567,6 +557,11 @@ A comprehensive Python project that analyzes business places using metadata and 
    pip install -r requirements.txt
    ```
 3. Set up environment variables:
+   ```bash
+   cp .env.example .env
+   # Edit .env file and add your Groq API key
+   ```
+   Or set directly:
    ```bash
    export GROQ_API_KEY="your_groq_api_key_here"
    ```
@@ -598,4 +593,13 @@ Input JSON should contain business entries with fields:
 
 ## Output Format
 
-Analysis results are saved as structured JSON with summaries and recommendations for each business
+Analysis results are saved as structured JSON with summaries and recommendations for each business.
+
+## Environment Variables
+
+Create a `.env` file in the root directory with:
+```
+GROQ_API_KEY=your_groq_api_key_here
+```
+
+

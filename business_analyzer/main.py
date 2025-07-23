@@ -1,4 +1,4 @@
-#main.py
+# main.py
 #!/usr/bin/env python3
 """
 Business Places Analyzer - Main Entry Point
@@ -131,6 +131,13 @@ def main():
             logger.info("Please place your business data JSON file in the data/ directory")
             return
         
+        # Check if API key is configured
+        if not os.getenv('GROQ_API_KEY'):
+            logger.error("GROQ_API_KEY not configured!")
+            logger.info("Please set your Groq API key in the .env file or environment variables")
+            logger.info("Create a .env file with: GROQ_API_KEY=your_actual_api_key")
+            return
+        
         # Run the complete analysis workflow
         orchestrator.load_data()
         orchestrator.run_analysis()
@@ -150,4 +157,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
