@@ -55,4 +55,5 @@ output/
 
 # Logs
 *.log
-.env/
+.env
+data/
