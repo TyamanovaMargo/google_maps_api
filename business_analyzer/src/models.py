@@ -249,4 +249,59 @@ def aggregate_sentiment_data(analyses: List[BusinessAnalysis]) -> SentimentRepor
     # Calculate averages
     total_businesses = len(analyses)
     avg_positive = total_positive / total_businesses if total_businesses > 0 else 0
-    avg_negative = total_negative / total_businesses if total_businesses > 0 else 
+    avg_negative = total_negative / total_businesses if total_businesses > 0 else 0
+    avg_neutral = total_neutral / total_businesses if total_businesses > 0 else 0
+    
+    # Count emotion frequencies
+    emotion_counts = {}
+    for emotion in all_emotions:
+        emotion_counts[emotion] = emotion_counts.get(emotion, 0) + 1
+    
+    # Sort emotions by frequency
+    top_emotions = [
+        {"emotion": emotion, "frequency": count} 
+        for emotion, count in sorted(emotion_counts.items(), key=lambda x: x[1], reverse=True)
+    ][:10]  # Top 10 emotions
+    
+    return SentimentReport(
+        total_businesses=total_businesses,
+        overall_sentiment_distribution={
+            'positive': round(avg_positive, 3),
+            'negative': round(avg_negative, 3),
+            'neutral': round(avg_neutral, 3)
+        },
+        top_emotions=top_emotions,
+        businesses_by_sentiment=businesses_by_sentiment,
+        sentiment_trends=f"Most common emotions: {', '.join([e['emotion'] for e in top_emotions[:3]])}"
+    )
+
+def filter_businesses_by_sentiment(
+    analyses: List[BusinessAnalysis], 
+    sentiment: str
+) -> List[BusinessAnalysis]:
+    """Filter businesses by their overall sentiment"""
+    return [analysis for analysis in analyses if analysis.overall_sentiment == sentiment]
+
+def get_businesses_with_emotion(
+    analyses: List[BusinessAnalysis], 
+    emotion: str
+) -> List[BusinessAnalysis]:
+    """Get businesses where reviews contain a specific emotion"""
+    result = []
+    for analysis in analyses:
+        if emotion.lower() in [e.lower() for e in analysis.dominant_emotions]:
+            result.append(analysis)
+    return result
+
+def calculate_sentiment_confidence(analysis: BusinessAnalysis) -> float:
+    """Calculate average confidence score for sentiment analysis"""
+    if not analysis.review_sentiments:
+        return 0.0
+    
+    confidences = [
+        review.get('confidence', 0.0) 
+        for review in analysis.review_sentiments 
+        if 'confidence' in review
+    ]
+    
+    return sum(confidences) / len(confidences) if confidences else 0.0
