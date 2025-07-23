@@ -1,7 +1,7 @@
 Top categories:
-restaurant           20
-point_of_interest    20
-food                 20
-establishment        20
-meal_takeaway         2
+point_of_interest    17
+establishment        17
+storage               4
+finance               3
+moving_company        1
 Name: count, dtype: int64

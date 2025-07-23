@@ -162,39 +162,7 @@ First 5 results:
 ✨ Search completed successfully!
 ```
 
-## 📊 Example Output Format
 
-The results are saved as JSON with the following structure:
-
-```json
-{
-  "metadata": {
-    "search_timestamp": "2025-01-15T10:30:00.123456",
-    "total_places": 25,
-    "file_version": "1.0"
-  },
-  "places": [
-    {
-      "name": "Joe's Pizza",
-      "address": "7 Carmine St, New York",
-      "latitude": 40.7301,
-      "longitude": -74.0027
-    },
-    {
-      "name": "Prince Street Pizza",
-      "address": "27 Prince St, New York", 
-      "latitude": 40.7229,
-      "longitude": -74.0027
-    },
-    {
-      "name": "Di Fara Pizza",
-      "address": "424 E 9th St, New York",
-      "latitude": 40.7267,
-      "longitude": -73.9821
-    }
-  ]
-}
-```
 
 ## 🔧 Module Documentation
 
@@ -300,3 +268,334 @@ The project handles various error scenarios:
    - Try a different keyword
    - Increase the search radius
    - Verify coordinates are correct
+
+
+
+
+
+   # Places Analysis Project
+
+A modular Python project for analyzing and visualizing Google Places API data with review mining and chatbot query.
+
+## Features
+
+- Extracts places information with reviews, ratings, categories, price levels
+- Analyzes reviews for keywords and sentiment (optional)
+- Analyzes categories and visualizes statistics
+- Visualizes distributions of ratings, reviews count, and price levels
+- Generates summary reports in CSV, JSON, and text
+- Provides LangChain-powered chatbot for querying the data
+
+## Project Structure
+```
+places_analysis/
+├── data/                      # JSON input files
+├── notebooks/                 # Jupyter exploration notebooks
+├── pipeline/
+│   ├── pipeline_runner.py     # Main pipeline steps
+│   ├── save_results.py        # Save results to CSV/JSON/report
+│   └── run_all.py             # Full pipeline with visualizations & saving
+├── reports/                   # Generated reports & visualizations
+├── scripts/
+│   ├── extract_places.py      # Extracts places and reviews
+│   ├── analyze_reviews.py     # Extracts keywords (optional)
+│   ├── category_analysis.py   # Analyzes categories
+│   ├── visualize_data.py      # Visualizations
+│   
+├── requirements.txt
+└── README.md
+```
+
+---
+
+## Quick Start
+
+### 1️⃣ Install dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 2️⃣ Run the full pipeline with saving results & visualizations
+```bash
+python -m pipeline.run_all
+
+
+```
+This will:
+- Extract places and reviews from `data/places_results.json`
+- Analyze categories
+- Visualize:
+  - Top categories
+  - Ratings distribution
+  - Reviews count distribution
+  - Price level distribution
+- Save CSV, JSON, and summary report to `reports/`
+
+### 3️⃣ Explore data manually in Jupyter
+Open:
+```
+notebooks/exploration.ipynb
+```
+
+### 4️⃣ Query your data with LangChain-powered chatbot
+```python
+from scripts.llm_query_agent import create_llm_agent
+agent = create_llm_agent('data/places_llm_data.jsonl')
+result = agent.invoke("Show me top-rated restaurants in Shinjuku")
+print(result['result'])
+```
+
+---
+
+## Recommended Visualizations Functions (from scripts/visualize_data.py)
+
+- `plot_top_categories(categories_series)`
+- `plot_ratings_distribution(df)`
+- `plot_reviews_count_distribution(df)`
+- `plot_price_level_distribution(df)`
+
+---
+
+## Example Command to Save Results
+```python
+from pipeline.save_results import save_to_csv, save_to_json, save_report
+
+save_to_csv(df, 'reports/places_results.csv')
+save_to_json(df, 'reports/places_results.json')
+save_report("Top categories:\n" + str(categories.head(10)), 'reports/summary.txt')
+```
+
+---
+
+## Requirements
+```
+pandas==2.2.2
+matplotlib==3.8.4
+seaborn==0.13.2
+nltk==3.8.1
+langchain==0.2.0
+openai==1.30.1
+faiss-cpu==1.8.0
+```
+
+---
+
+## ✅ Project ready for:
+- Data exploration
+- Automated pipeline
+- Report generation
+- LLM-based question answering on your places data
+
+
+
+Here is the `README.md` content in proper Markdown format:
+
+```markdown
+# 🧠 places_groq_query
+
+**LLM-powered analyzer for real-world places** (e.g., cafes, restaurants, stores) using structured metadata and customer reviews.  
+The project generates AI-based business insights using LangChain and Groq/OpenAI.
+
+---
+
+## 📦 Features
+
+- ✅ Load and parse place metadata from `.json` files  
+- 🤖 Generate detailed prompts from full metadata and reviews  
+- 🔍 Send them to an LLM (Groq or OpenAI) using a modular client  
+- 📈 Receive clear recommendations, quality signals, and insights  
+- 💾 Save all results to a structured JSON file
+
+---
+
+## 🗂 Project Structure
+
+```
+
+places\_groq\_query/
+├── main.py               # Launches the full analysis pipeline
+├── analyzer.py           # Builds prompts and handles LLM analysis
+├── file\_loader.py        # Loads place metadata from JSON files
+├── groq\_client.py        # Builds prompts and sends requests to LLM
+├── logger.py             # Structured logging output
+├── config.py             # Placeholder for shared settings
+├── **init**.py
+data/
+├── my\_places.json        # Your input file with places
+reports/
+├── places\_analysis.json  # Final output with results
+
+````
+
+---
+
+## 🧪 Input Format
+
+Your JSON file in `data/` should contain a list of dictionaries with the following fields:
+
+```json
+[
+  {
+    "name": "Cafe Aroma",
+    "rating": 4.6,
+    "user_ratings_total": 120,
+    "price_level": 2,
+    "types": ["cafe", "restaurant"],
+    "lat": 32.0853,
+    "lng": 34.7818,
+    "reviews": [
+      "Great coffee and cozy atmosphere.",
+      "Staff were kind but service was slow."
+    ]
+  }
+]
+````
+
+---
+
+## 🚀 How to Run
+
+1. **Install dependencies** (in a virtual environment recommended):
+
+```bash
+pip install -r requirements.txt
+```
+
+2. **Set your API key** for OpenAI or Groq:
+
+```bash
+export OPENAI_API_KEY=your-key-here
+```
+
+3. **Run the analysis**:
+
+```bash
+python3 -m places_groq_query.main
+```
+
+Results will be saved to:
+
+```
+reports/places_analysis.json
+```
+
+---
+
+## 📤 Output Example
+
+```json
+[
+  {
+    "name": "Cafe Aroma",
+    "analysis": "This place is successful due to its consistent service quality, positive customer reviews, and comfortable ambiance. However, it could improve by addressing wait times during peak hours."
+  }
+]
+```
+
+---
+
+## 🧠 Prompts & LLM Behavior
+
+Each place is sent to the LLM with:
+
+* Full metadata (as JSON)
+* Up to 5 real user reviews
+* A reusable instruction:
+  *"Analyze the place. Identify strengths and weaknesses. Provide actionable insights."*
+
+---
+
+## 🛠 To Customize
+
+* 🔧 Modify prompt behavior in `groq_client.py → build_prompt()`
+* 🧠 Switch LLM providers via `send_prompt()`
+* 📁 Add CSV/JSON writers or visualizations in `result_writer.py` (optional)
+
+---
+
+## 📃 License
+
+MIT — free to use and modify.
+
+---
+
+```
+
+Would you like me to save it directly into your project as `README.md`?
+```
+ Project Structure
+business_analyzer/
+├── main.py
+├── src/
+│   ├── __init__.py
+│   ├── loader.py
+│   ├── analyzer.py
+│   ├── models.py
+│   └── utils.py
+├── reports/
+│   └── analysis_output.json
+├── data/
+│   └── business_data.json
+├── requirements.txt
+└── README.md
+
+# requirements.txt
+langchain==0.1.0
+langchain-groq==0.0.1
+groq==0.4.1
+pydantic==2.5.0
+python-dotenv==1.0.0
+typing-extensions==4.8.0
+
+# README.md
+# Business Places Analyzer
+
+A comprehensive Python project that analyzes business places using metadata and customer reviews through LangChain and Groq integration.
+
+## Features
+
+- **Data Loading**: Parse JSON files containing business metadata and reviews
+- **Semantic Analysis**: Analyze strengths, weaknesses, service quality, staff behavior, pricing, and user satisfaction
+- **Query System**: Ask general questions about businesses and get insights
+- **Structured Output**: Generate structured reports with summaries and recommendations
+
+## Installation
+
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Set up environment variables:
+   ```bash
+   export GROQ_API_KEY="your_groq_api_key_here"
+   ```
+
+## Usage
+
+1. Place your business data JSON file in the `data/` directory
+2. Run the analyzer:
+   ```bash
+   python main.py
+   ```
+3. Check the results in `reports/analysis_output.json`
+
+## Project Structure
+
+- `main.py`: Entry point and orchestration
+- `src/loader.py`: Data loading and preprocessing
+- `src/analyzer.py`: Core analysis logic using LangChain and Groq
+- `src/models.py`: Data models and schemas
+- `src/utils.py`: Utility functions
+- `reports/`: Output directory for analysis results
+
+## Data Format
+
+Input JSON should contain business entries with fields:
+- name, address, rating, user_ratings_total
+- price_level, types, lat, lng
+- reviews (pipe-separated string)
+
+## Output Format
+
+Analysis results are saved as structured JSON with summaries and recommendations for each business

@@ -15,6 +15,7 @@ def extract_places(json_path: str) -> pd.DataFrame:
         records.append({
             'name': place.get('name'),
             'address': place.get('formatted_address') or place.get('vicinity'),
+            'price_level': place.get('price_level'),
             'rating': place.get('rating'),
             'user_ratings_total': place.get('user_ratings_total'),
             'types': ", ".join(place.get('types', [])),
