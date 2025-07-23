@@ -68,10 +68,16 @@ class BusinessAnalysisOrchestrator:
         logger.info("Running sample queries...")
         
         sample_questions = [
-            "What are the best-rated businesses?",
-            "Which places have good service but low popularity?",
-            "Are there frequent complaints about staff or delivery?",
-            "Which businesses need the most improvement?"
+            # "What are the best-rated businesses?",
+            # "Which places have good service but low popularity?",
+            # "Are there frequent complaints about staff or delivery?",
+            # "Which businesses need the most improvement?"
+            "Which nearby businesses have the best customer satisfaction?",
+            "Are there businesses near this location with frequent customer complaints?",
+            "Which businesses nearby show strong reputation and could indicate good foot traffic?",
+            "Do nearby businesses mention service quality, pricing, or trust?",
+            "Are there patterns in customer reviews that show opportunities for investment?",
+            "Which places demonstrate potential for high return on investment based on customer feedback?"
         ]
         
         query_results = []
