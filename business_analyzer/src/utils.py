@@ -3,6 +3,7 @@ import json
 import os
 from typing import List, Dict, Any
 import logging
+from typing import Optional
 
 def setup_logging():
     """Configure logging for the application"""

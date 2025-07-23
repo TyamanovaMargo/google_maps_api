@@ -8,6 +8,8 @@ Analyzes business places using metadata and customer reviews
 import os
 import sys
 from typing import List
+
+
 from dotenv import load_dotenv
 
 # Add src to Python path
@@ -26,7 +28,7 @@ logger = setup_logging()
 class BusinessAnalysisOrchestrator:
     """Main orchestrator for business analysis workflow"""
     
-    def __init__(self, data_file: str = "data/business_data.json"):
+    def __init__(self, data_file: str = "data/places_results.json"):
         self.data_file = data_file
         self.loader = BusinessDataLoader(data_file)
         self.analyzer = BusinessAnalyzer()
